@@ -239,6 +239,11 @@ export default function Game() {
       <header className="daily-topbar"><strong>{weeklyGame.kicker}</strong><span>WEEK OF {thisWeek}</span></header>
       <section className="investigation-layout">
         <div><p className="daily-kicker">{weeklyGame.title}</p><h1>WHERE IS TRUMP?</h1><p className="daily-subtitle">Choose covered tiles to declassify. Once selected, a tile cannot be changed.</p></div>
+        {activeOrder && <section className="rotating-order-card" aria-label="Rotating executive order bonus question">
+          <p>{jokesJson.labels.rotatingPrefix} {activeOrder.number} · OPTIONAL BONUS</p><h2>{activeOrder.prompt}</h2>
+          <div>{activeOrder.choices.map((choice, index) => <button type="button" key={choice} disabled={bonusChoice !== null} className={bonusChoice === null ? '' : index === activeOrder.correctIndex ? 'correct' : bonusChoice === index ? 'wrong' : 'muted'} onClick={() => setBonusChoice(index)}>{choice}</button>)}</div>
+          {bonusChoice !== null && <strong role="status">{activeOrder.feedback[bonusChoice]}</strong>}
+        </section>}
         <div className={`weekly-board ${guessMode ? 'guessing' : ''}`} onClick={guessTrump} role="img" aria-label={weeklyGame.imageAlt}>
           <img src={publicPath(weeklyGame.image)} alt="" />
           <div className="tile-grid" aria-label="Classified picture tiles">{Array.from({ length: TILE_COUNT }, (_, tile) => {
@@ -276,11 +281,6 @@ export default function Game() {
         <button type="button" disabled={testDayOffset >= MAX_TEST_DAY_OFFSET} onClick={advanceTestDay}>{testDayOffset >= MAX_TEST_DAY_OFFSET ? '7-DAY LIMIT REACHED' : jokesJson.labels.testButton}</button>
         {testDayOffset > 0 && <button type="button" className="test-reset" onClick={resetTestDay}>RESET TO REAL TODAY</button>}
       </div>
-      {activeOrder && <section className="rotating-order-card" aria-label="Rotating executive order bonus question">
-        <p>{jokesJson.labels.rotatingPrefix} {activeOrder.number}</p><h2>{activeOrder.prompt}</h2>
-        <div>{activeOrder.choices.map((choice, index) => <button type="button" key={choice} disabled={bonusChoice !== null} className={bonusChoice === null ? '' : index === activeOrder.correctIndex ? 'correct' : bonusChoice === index ? 'wrong' : 'muted'} onClick={() => setBonusChoice(index)}>{choice}</button>)}</div>
-        {bonusChoice !== null && <strong role="status">{activeOrder.feedback[bonusChoice]}</strong>}
-      </section>}
       <div className="home-stats"><div><strong>{player.currentStreak}</strong><span>CURRENT STREAK</span></div><div><strong>{player.bestStreak}</strong><span>BEST STREAK</span></div><div><strong>{player.perfectDays}</strong><span>PERFECT DAYS</span></div><div><strong>{week.revealedTiles.length}/25</strong><span>TILES OPEN</span></div></div>
       <p className="streak-help">Complete the daily quiz on consecutive days to extend your streak.</p>
       <p className="fine-print">Independent parody/satire. Progress is stored privately on this device. No account required.</p>

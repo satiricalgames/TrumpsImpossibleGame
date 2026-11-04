@@ -80,6 +80,10 @@ const runtimeImportsJokes = /jokes\.json/.test(gameSource);
 check(runtimeImportsJokes, ['G-130', 'J-011', 'X-006'], 'Player runtime consumes jokes/share-template data.', 'app/game.tsx hardcodes share/ticker wording and does not import jokes.json.');
 const runtimeImportsRotating = /rotating_orders/.test(gameSource);
 check(runtimeImportsRotating, ['R-013', 'X-007'], 'Player runtime consumes rotating-order data.', 'app/game.tsx does not import rotating_orders.json.');
+const revealStart = gameSource.indexOf("if (phase === 'reveal')");
+const rotatingCard = gameSource.indexOf('className="rotating-order-card"');
+const homeStart = gameSource.indexOf('className="daily-shell home-view"');
+check(revealStart >= 0 && rotatingCard > revealStart && rotatingCard < homeStart, ['G-001', 'R-013', 'X-007'], 'Rotating bonus appears after the daily quiz, not on the intro screen.');
 check(liveQuestions.every((q) => typeof q.metricKey === 'string' && q.metricKey.length > 0), ['G-041', 'Q-005'], 'Every live question declares a metric key.', liveQuestions.filter((q) => !q.metricKey).map((q) => q.id).join(', '));
 check(liveQuestions.every((q) => Number.isFinite(resolveMetric(q.metricKey))), ['G-041', 'G-043', 'M-009', 'X-005'], 'Every live-question metric key resolves to a finite published value.', liveQuestions.filter((q) => !Number.isFinite(resolveMetric(q.metricKey))).map((q) => `${q.id}:${q.metricKey}`).join(', '));
 
