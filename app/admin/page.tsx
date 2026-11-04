@@ -59,6 +59,14 @@ export default function AdminPage() {
           <span>Bookmark this page. The individual editors can stay unlinked from the public game.</span>
         </div>
 
+        <div className="editor-notice admin-security-notice">
+          <strong>SECURITY BOUNDARY</strong>
+          <span>
+            These tools only edit or download files on your device. They cannot change the live game by
+            themselves; publishing still requires an authorized GitHub deployment.
+          </span>
+        </div>
+
         <div className="admin-tool-grid">
           {adminTools.map((tool, index) => (
             <a className="admin-tool-card" href={publicPath(tool.href)} key={tool.href}>
