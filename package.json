@@ -8,10 +8,13 @@
   },
   "scripts": {
     "dev": "vinext dev",
-    "build": "vinext build",
+    "build": "next build",
+    "build:cloudflare": "next build",
     "build:pages": "next build",
+    "build:worker": "vinext build",
+    "deploy:cloudflare": "wrangler deploy --config wrangler.jsonc",
     "start": "vinext start",
-    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern .next-pages"
+    "lint": "eslint . --ignore-pattern dist --ignore-pattern out --ignore-pattern outputs --ignore-pattern work --ignore-pattern .next --ignore-pattern .next-pages --ignore-pattern .wrangler"
   },
   "dependencies": {
     "next": "16.2.6",
