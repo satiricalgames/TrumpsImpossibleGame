@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from 'react';
 import builtInQuestions from '@/content/questions.json';
+import executiveMetrics from '@/content/executive_metrics.json';
 import { publicPath } from '@/lib/public-path';
 
 type QuestionType = 'standard' | 'live';
@@ -13,6 +14,17 @@ type Question = {
 };
 
 const SOURCE_KINDS: SourceKind[] = ['official', 'reference', 'internal', 'original_satire', 'user_supplied_asset'];
+const METRIC_OPTIONS = [
+  ['activeInjunctions', 'Active injunctions', executiveMetrics.activeInjunctions],
+  ['inflation_yoy_pct', 'Annual CPI inflation', executiveMetrics.inflation_yoy_pct],
+  ['egg_price_change_since_jan_2025_pct', 'Egg-price change since Jan 2025', executiveMetrics.egg_price_change_since_jan_2025_pct],
+  ['regular_gas_price_change_since_inauguration_pct', 'Gas-price change since inauguration', executiveMetrics.regular_gas_price_change_since_inauguration_pct],
+  ['real_average_worker_annual_change_usd', 'Annualised real worker-pay change', executiveMetrics.real_average_worker_annual_change_usd],
+  ['golfCounter', 'Golf counter', executiveMetrics.golfCounter],
+  ['simulatedPoll', 'Simulated poll', executiveMetrics.simulatedPoll],
+  ['latestExecutiveOrder.value', 'Latest executive-order value', executiveMetrics.latestExecutiveOrder.value],
+] as const;
+const METRIC_KEYS = new Set(METRIC_OPTIONS.map(([key]) => key));
 const clone = <T,>(value: T): T => structuredClone(value);
 const blankQuestion = (number: number): Question => ({
   id: `question-${number}`, number, type: 'standard', enabled: true, kicker: '', prompt: '',
@@ -43,6 +55,7 @@ function validate(question: Question, bank: Question[], originalId: string | nul
   if (question.choices.length !== 4 || question.choices.some((choice) => !choice)) errors.push('Provide exactly four non-empty choices.');
   if (!Number.isInteger(question.correctIndex) || question.correctIndex < 0 || question.correctIndex > 3) errors.push('Select one correct answer.');
   if (question.feedback.length !== 4 || question.feedback.some((line) => !line)) errors.push('Provide one feedback line for each choice.');
+  if (question.type === 'live' && !METRIC_KEYS.has(question.metricKey as typeof METRIC_OPTIONS[number][0])) errors.push('Choose a valid executive metric for this live question.');
   if (!question.sources.length) errors.push('Add at least one source or original-satire record.');
   question.sources.forEach((source, index) => {
     if (!source.title) errors.push(`Source ${index + 1} needs a title.`);
@@ -62,6 +75,7 @@ function validateBank(value: unknown): Question[] {
     if (numbers.has(question.number)) issues.push(`Duplicate number: ${question.number}.`); else numbers.add(question.number);
     if (!Array.isArray(question.choices) || question.choices.length !== 4) issues.push(`${label} must have four choices.`);
     if (!Array.isArray(question.feedback) || question.feedback.length !== 4) issues.push(`${label} must have four feedback lines.`);
+    if (question.type === 'live' && !METRIC_KEYS.has(question.metricKey as typeof METRIC_OPTIONS[number][0])) issues.push(`${label} must use a valid executive metric key.`);
     if (!Array.isArray(question.sources) || !question.sources.length) issues.push(`${label} needs source information.`);
   });
   if (issues.length) throw new Error(`Import rejected: ${issues.slice(0, 8).join(' ')}`);
@@ -138,8 +152,8 @@ export default function DailyQuestionManager() {
       <div className="editor-grid">
         <label className="editor-check editor-span"><input type="checkbox" checked={draft.enabled} onChange={(event) => patch({ enabled: event.target.checked })} /><span>Enabled for weekly scheduling</span></label>
         <label className="editor-field"><span>Question ID</span><input value={draft.id} onChange={(event) => patch({ id: event.target.value })} /></label><label className="editor-field"><span>Question number</span><input type="number" min={1} value={draft.number} onChange={(event) => patch({ number: Number(event.target.value) })} /></label>
-        <label className="editor-field"><span>Question type</span><select value={draft.type} onChange={(event) => patch({ type: event.target.value as QuestionType })}><option value="standard">Standard</option><option value="live">Live-data</option></select></label>
-        {draft.type === 'live' && <label className="editor-field"><span>Metric key</span><input value={draft.metricKey ?? ''} onChange={(event) => patch({ metricKey: event.target.value })} placeholder="Optional update reference" /></label>}
+        <label className="editor-field"><span>Question type</span><select value={draft.type} onChange={(event) => patch({ type: event.target.value as QuestionType, ...(event.target.value === 'live' && !draft.metricKey ? { metricKey: 'activeInjunctions' } : {}) })}><option value="standard">Standard</option><option value="live">Live-data</option></select></label>
+        {draft.type === 'live' && <label className="editor-field"><span>Executive metric</span><select value={draft.metricKey ?? ''} onChange={(event) => patch({ metricKey: event.target.value })}><option value="">Select a metric…</option>{METRIC_OPTIONS.map(([key, label, current]) => <option value={key} key={key}>{label} · current value {current}</option>)}</select></label>}
         <label className="editor-field editor-span"><span>Kicker</span><input value={draft.kicker} onChange={(event) => patch({ kicker: event.target.value })} /></label><label className="editor-field editor-span"><span>Question</span><textarea rows={3} value={draft.prompt} onChange={(event) => patch({ prompt: event.target.value })} /></label>
         {draft.choices.map((choice, index) => <div className="daily-answer-editor" key={index}><label className="editor-field"><span>Answer {String.fromCharCode(65 + index)}</span><input value={choice} onChange={(event) => updateChoice(index, event.target.value)} /></label><label className="editor-field"><span>Feedback for {String.fromCharCode(65 + index)}</span><input value={draft.feedback[index] ?? ''} onChange={(event) => updateFeedback(index, event.target.value)} /></label></div>)}
         <label className="editor-field editor-span"><span>Correct answer</span><select value={draft.correctIndex} onChange={(event) => patch({ correctIndex: Number(event.target.value) })}>{draft.choices.map((choice, index) => <option key={index} value={index}>{String.fromCharCode(65 + index)} · {choice || 'Empty answer'}</option>)}</select></label>

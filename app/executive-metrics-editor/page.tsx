@@ -6,6 +6,10 @@ import { publicPath } from '@/lib/public-path';
 
 type MetricsFile = {
   activeInjunctions: number;
+  inflation_yoy_pct: number;
+  egg_price_change_since_jan_2025_pct: number;
+  regular_gas_price_change_since_inauguration_pct: number;
+  real_average_worker_annual_change_usd: number;
   golfCounter: number;
   latestExecutiveOrder: { label: string; date: string; value: number };
   tickerHeadline: string;
@@ -17,12 +21,17 @@ type LocalFileHandle = { name: string; getFile: () => Promise<File>; createWrita
 
 const clone = (value: MetricsFile) => JSON.parse(JSON.stringify(value)) as MetricsFile;
 const isWholeNumber = (value: number) => Number.isInteger(value) && value >= 0;
+const isFiniteNumber = (value: number) => Number.isFinite(value);
 
 function validate(value: unknown): { value?: MetricsFile; errors: string[] } {
   const errors: string[] = [];
   if (!value || typeof value !== 'object' || Array.isArray(value)) return { errors: ['The JSON root must be an object.'] };
   const item = value as Partial<MetricsFile>;
   if (!isWholeNumber(Number(item.activeInjunctions))) errors.push('activeInjunctions must be a whole number of 0 or higher.');
+  if (!isFiniteNumber(Number(item.inflation_yoy_pct)) || Number(item.inflation_yoy_pct) < 0) errors.push('inflation_yoy_pct must be a number of 0 or higher.');
+  if (!isFiniteNumber(Number(item.egg_price_change_since_jan_2025_pct))) errors.push('egg_price_change_since_jan_2025_pct must be a number.');
+  if (!isFiniteNumber(Number(item.regular_gas_price_change_since_inauguration_pct))) errors.push('regular_gas_price_change_since_inauguration_pct must be a number.');
+  if (!isFiniteNumber(Number(item.real_average_worker_annual_change_usd))) errors.push('real_average_worker_annual_change_usd must be a number.');
   if (!isWholeNumber(Number(item.golfCounter))) errors.push('golfCounter must be a whole number of 0 or higher.');
   if (!Number.isInteger(Number(item.simulatedPoll)) || Number(item.simulatedPoll) < 0 || Number(item.simulatedPoll) > 100) errors.push('simulatedPoll must be a whole percentage from 0 to 100.');
   if (!item.latestExecutiveOrder || typeof item.latestExecutiveOrder !== 'object') errors.push('latestExecutiveOrder must be an object.');
@@ -34,6 +43,10 @@ function validate(value: unknown): { value?: MetricsFile; errors: string[] } {
   if (errors.length) return { errors };
   return { errors, value: {
     activeInjunctions: Number(item.activeInjunctions),
+    inflation_yoy_pct: Number(item.inflation_yoy_pct),
+    egg_price_change_since_jan_2025_pct: Number(item.egg_price_change_since_jan_2025_pct),
+    regular_gas_price_change_since_inauguration_pct: Number(item.regular_gas_price_change_since_inauguration_pct),
+    real_average_worker_annual_change_usd: Number(item.real_average_worker_annual_change_usd),
     golfCounter: Number(item.golfCounter),
     latestExecutiveOrder: { label: String(item.latestExecutiveOrder?.label).trim(), date: String(item.latestExecutiveOrder?.date), value: Number(item.latestExecutiveOrder?.value) },
     tickerHeadline: String(item.tickerHeadline).trim(),
@@ -78,7 +91,7 @@ export default function ExecutiveMetricsEditor() {
   const reset = () => { setDraft(clone(builtIn)); fileHandle.current = null; setDirty(false); setErrors([]); setStatus('Reloaded the built-in executive metrics.'); };
 
   return <main className="question-editor-shell">
-    <header className="editor-header"><div><p>PRIVATE CONTENT TOOL</p><h1>EXECUTIVE METRICS EDITOR</h1><span>Unlinked from the game. These shared values feed questions that select a matching metric key.</span></div><div className="editor-file-actions">
+    <header className="editor-header"><div><p>PRIVATE CONTENT TOOL</p><h1>EXECUTIVE METRICS EDITOR</h1><span>These published values feed live questions that select a matching metric key.</span></div><div className="editor-file-actions">
       <input ref={uploadInput} className="editor-hidden-input" type="file" accept=".json,application/json" onChange={(event) => void importFile(event.target.files?.[0])} />
       <button type="button" onClick={() => uploadInput.current?.click()}>UPLOAD WHOLE executive_metrics.json</button><button type="button" onClick={openLocalFile}>OPEN LOCAL FILE</button><button type="button" onClick={() => void save()}>SAVE TO OPEN FILE</button><button type="button" onClick={download}>DOWNLOAD JSON</button><button type="button" onClick={() => void copy()}>COPY JSON</button><a href={publicPath('/question-editor/')}>OPEN QUESTION EDITOR</a><a href={publicPath('/content-guides/ai-content-guide.md')} download>DOWNLOAD AI CONTENT GUIDE</a><button type="button" className="editor-quiet" onClick={reset}>RESET TO BUILT-IN</button>
     </div></header>
@@ -89,6 +102,10 @@ export default function ExecutiveMetricsEditor() {
       {errors.length > 0 && <div className="editor-errors" role="alert"><strong>PLEASE FIX:</strong><ul>{errors.map((error) => <li key={error}>{error}</li>)}</ul></div>}
       <div className="editor-grid">
         <label className="editor-field"><span>Active injunctions</span><small>Metric key: activeInjunctions</small><input type="number" min={0} step={1} value={draft.activeInjunctions} onChange={(event) => update({ activeInjunctions: Number(event.target.value) })} /></label>
+        <label className="editor-field"><span>Annual CPI inflation</span><small>Metric key: inflation_yoy_pct · percent</small><input type="number" min={0} step="any" value={draft.inflation_yoy_pct} onChange={(event) => update({ inflation_yoy_pct: Number(event.target.value) })} /></label>
+        <label className="editor-field"><span>Egg-price change since Jan 2025</span><small>Metric key: egg_price_change_since_jan_2025_pct · signed percent</small><input type="number" step="any" value={draft.egg_price_change_since_jan_2025_pct} onChange={(event) => update({ egg_price_change_since_jan_2025_pct: Number(event.target.value) })} /></label>
+        <label className="editor-field"><span>Gas-price change since inauguration</span><small>Metric key: regular_gas_price_change_since_inauguration_pct · signed percent</small><input type="number" step="any" value={draft.regular_gas_price_change_since_inauguration_pct} onChange={(event) => update({ regular_gas_price_change_since_inauguration_pct: Number(event.target.value) })} /></label>
+        <label className="editor-field"><span>Annualised real worker-pay change</span><small>Metric key: real_average_worker_annual_change_usd · signed USD</small><input type="number" step="any" value={draft.real_average_worker_annual_change_usd} onChange={(event) => update({ real_average_worker_annual_change_usd: Number(event.target.value) })} /></label>
         <label className="editor-field"><span>Golf counter</span><small>Metric key: golfCounter</small><input type="number" min={0} step={1} value={draft.golfCounter} onChange={(event) => update({ golfCounter: Number(event.target.value) })} /></label>
         <label className="editor-field"><span>Simulated poll</span><small>Metric key: simulatedPoll · percentage from 0 to 100</small><input type="number" min={0} max={100} step={1} value={draft.simulatedPoll} onChange={(event) => update({ simulatedPoll: Number(event.target.value) })} /></label>
         <label className="editor-field"><span>Last updated</span><small>ISO date and time, including time zone.</small><input value={draft.lastUpdated} onChange={(event) => update({ lastUpdated: event.target.value })} /></label>
@@ -99,7 +116,7 @@ export default function ExecutiveMetricsEditor() {
         <h3 className="editor-subheading editor-span">FALLBACK TICKER</h3>
         <label className="editor-field editor-span"><span>Ticker headline</span><small>Used only when jokes.json does not provide a ticker headline.</small><textarea rows={3} value={draft.tickerHeadline} onChange={(event) => update({ tickerHeadline: event.target.value })} /></label>
       </div>
-      <div className="editor-apply-row"><button type="button" onClick={checkedText}>VALIDATE COMPLETE JSON</button><span>4 selectable numeric metric keys</span></div>
+      <div className="editor-apply-row"><button type="button" onClick={checkedText}>VALIDATE COMPLETE JSON</button><span>8 selectable numeric metric keys</span></div>
       <details className="editor-json-preview"><summary>Preview complete JSON</summary><pre>{jsonText}</pre></details>
     </section></div>
   </main>;

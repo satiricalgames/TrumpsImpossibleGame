@@ -1,12 +1,17 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import executiveMetricsJson from '../content/executive_metrics.json';
+import jokesJson from '../content/jokes.json';
 import questionsJson from '../content/questions.json';
+import rotatingOrdersJson from '../content/rotating_orders.json';
 import weeklyGame from '../content/weekly_game.json';
 import { publicPath } from '../lib/public-path';
 import { EMPTY_PLAYER_STATE, loadPlayerState, type PlayerState, requestPersistentStorage, savePlayerState, type WeekProgress } from '../lib/daily-store';
 
-type DailyQuestion = { choices: string[]; correctIndex: number; feedback?: string[]; id: string; kicker: string; prompt: string; type: string };
+type DailyQuestion = { choices: string[]; correctIndex: number; feedback?: string[]; id: string; kicker: string; metricKey?: string; prompt: string; type: string };
+type MetricValue = number | { [key: string]: MetricValue };
+type RotatingOrder = { choices: string[]; correctIndex: number; enabled: boolean; feedback: string[]; id: string; kicker: string; number: number; prompt: string };
 type Phase = 'home' | 'quiz' | 'reveal';
 const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
 const TILE_COUNT = 25;
@@ -42,18 +47,50 @@ function meltdownLabel(level: number): string {
   if (level >= 1) return 'SLIGHTLY ANNOYED';
   return 'SURPRISINGLY CALM';
 }
+function metricValue(metricKey?: string): number | null {
+  if (!metricKey) return null;
+  let value: MetricValue | undefined = executiveMetricsJson as unknown as MetricValue;
+  for (const segment of metricKey.split('.')) {
+    if (!value || typeof value !== 'object') return null;
+    value = value[segment];
+  }
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+function formatMetric(metricKey: string, value: number): string {
+  if (metricKey === 'inflation_yoy_pct') return `${value}%`;
+  if (metricKey === 'egg_price_change_since_jan_2025_pct' || metricKey === 'regular_gas_price_change_since_inauguration_pct') {
+    return `${value < 0 ? 'Down' : 'Up'} about ${Math.abs(value)}%`;
+  }
+  if (metricKey === 'real_average_worker_annual_change_usd') return `${value < 0 ? 'Down' : 'Up'} about $${Math.abs(value).toLocaleString('en-US')} per year`;
+  return value.toLocaleString('en-US');
+}
+function withLiveMetric(question: DailyQuestion): DailyQuestion {
+  if (question.type !== 'live' || !question.metricKey) return question;
+  const value = metricValue(question.metricKey);
+  if (value === null) return question;
+  const choices = [...question.choices];
+  choices[question.correctIndex] = formatMetric(question.metricKey, value);
+  return { ...question, choices };
+}
+function fillTemplate(template: string, values: Record<string, string | number>): string {
+  return Object.entries(values).reduce((text, [key, value]) => text.replaceAll(`{${key}}`, String(value)), template);
+}
 function shareText(today: string, answers: boolean[], week: WeekProgress, profile: PlayerState): string {
   const grid = answers.map((answer) => answer ? '🟩' : '🟥').join('');
+  const score = answers.filter(Boolean).length;
+  const templateGroup = score <= 2 ? jokesJson.shareTemplates.early : score >= 4 ? jokesJson.shareTemplates.late : jokesJson.shareTemplates.default;
+  const template = templateGroup[(score + today.length) % templateGroup.length];
+  const summary = fillTemplate(template, { question: answers.length, failureType: `${answers.length - score} disputed answer${answers.length - score === 1 ? '' : 's'}`, bingScore: score });
   const level = Math.max(0, week.totalCorrect - TILE_COUNT);
   const response = weeklyGame.meltdownResponses[(week.totalCorrect + today.length) % weeklyGame.meltdownResponses.length];
   return [
     `TRUMP'S IMPOSSIBLE DAILY — ${today}`,
     grid,
-    `${answers.filter(Boolean).length}/5 · ${week.revealedTiles.length}/25 tiles`,
+    `${score}/5 · ${week.revealedTiles.length}/25 tiles`,
     `🔥 ${profile.currentStreak}-day streak`,
     week.foundTrump ? `🔎 TRUMP FOUND after ${week.foundAtTiles ?? week.revealedTiles.length} tiles` : '🔎 Trump remains under investigation',
     level ? `📣 Meltdown ${level}/10: ${meltdownLabel(level)}` : '',
-    '', response,
+    '', summary, response,
   ].filter(Boolean).join('\n');
 }
 
@@ -67,6 +104,7 @@ export default function Game() {
   const [guessMode, setGuessMode] = useState(false);
   const [message, setMessage] = useState('');
   const [testDayOffset, setTestDayOffset] = useState(0);
+  const [bonusChoice, setBonusChoice] = useState<number | null>(null);
 
   const now = useMemo(() => {
     const shifted = new Date();
@@ -79,8 +117,12 @@ export default function Game() {
   const questions = useMemo(() => {
     const bank = questionsJson as DailyQuestion[];
     const ids = weeklyGame.dailyQuestionIds[dayName];
-    return ids.map((id) => bank.find((question) => question.id === id)).filter((question): question is DailyQuestion => Boolean(question?.choices && question.correctIndex >= 0));
+    return ids.map((id) => bank.find((question) => question.id === id)).filter((question): question is DailyQuestion => Boolean(question?.choices && question.correctIndex >= 0)).map(withLiveMetric);
   }, [dayName]);
+  const activeOrder = useMemo(() => {
+    if (!rotatingOrdersJson.enabled) return null;
+    return (rotatingOrdersJson.orders as RotatingOrder[]).find((order) => order.id === rotatingOrdersJson.activeOrderId && order.enabled) ?? null;
+  }, []);
   const week = player.weeks[thisWeek] ?? blankWeek();
   const todayResult = player.days[today];
   const revealCredits = Math.max(0, Math.min(TILE_COUNT - week.revealedTiles.length, week.totalCorrect - week.revealedTiles.length));
@@ -119,7 +161,8 @@ export default function Game() {
     setSelectedChoice(choiceIndex);
     const correct = choiceIndex === currentQuestion.correctIndex;
     setAnswers((existing) => [...existing, correct]);
-    setMessage(currentQuestion.feedback?.[choiceIndex] ?? (correct ? 'CORRECT. THE RECORD HAS BEEN TEMPORARILY UPDATED.' : 'WRONG. THE FACTS HAVE BEEN ESCORTED OUT.'));
+    const recovery = jokesJson.recoveryMessages[(questionIndex + choiceIndex) % jokesJson.recoveryMessages.length];
+    setMessage(currentQuestion.feedback?.[choiceIndex] ?? (correct ? 'CORRECT. THE RECORD HAS BEEN TEMPORARILY UPDATED.' : recovery));
   };
   const finishQuiz = () => {
     const score = answers.filter(Boolean).length;
@@ -229,14 +272,19 @@ export default function Game() {
       <button type="button" className="begin-button" onClick={startQuiz}>{todayResult ? 'OPEN WEEKLY INVESTIGATION' : 'PLAY TODAY\'S 5 QUESTIONS'}</button>
       {todayResult && <p className="completed-today">TODAY COMPLETE · {todayResult.answers.map((answer) => answer ? '🟩' : '🟥').join('')} · {todayResult.score}/5</p>}
       <div className="test-clock" aria-label="Daily game testing controls">
-        <div><span>TESTING CLOCK</span><strong>{testDayOffset ? `+${testDayOffset} DAY${testDayOffset === 1 ? '' : 'S'}` : 'REAL TODAY'}</strong></div>
-        <button type="button" disabled={testDayOffset >= MAX_TEST_DAY_OFFSET} onClick={advanceTestDay}>{testDayOffset >= MAX_TEST_DAY_OFFSET ? '7-DAY LIMIT REACHED' : 'ADVANCE ONE DAY'}</button>
+        <div><span>{jokesJson.labels.testMode}</span><strong>{testDayOffset ? `+${testDayOffset} DAY${testDayOffset === 1 ? '' : 'S'}` : 'REAL TODAY'}</strong></div>
+        <button type="button" disabled={testDayOffset >= MAX_TEST_DAY_OFFSET} onClick={advanceTestDay}>{testDayOffset >= MAX_TEST_DAY_OFFSET ? '7-DAY LIMIT REACHED' : jokesJson.labels.testButton}</button>
         {testDayOffset > 0 && <button type="button" className="test-reset" onClick={resetTestDay}>RESET TO REAL TODAY</button>}
       </div>
+      {activeOrder && <section className="rotating-order-card" aria-label="Rotating executive order bonus question">
+        <p>{jokesJson.labels.rotatingPrefix} {activeOrder.number}</p><h2>{activeOrder.prompt}</h2>
+        <div>{activeOrder.choices.map((choice, index) => <button type="button" key={choice} disabled={bonusChoice !== null} className={bonusChoice === null ? '' : index === activeOrder.correctIndex ? 'correct' : bonusChoice === index ? 'wrong' : 'muted'} onClick={() => setBonusChoice(index)}>{choice}</button>)}</div>
+        {bonusChoice !== null && <strong role="status">{activeOrder.feedback[bonusChoice]}</strong>}
+      </section>}
       <div className="home-stats"><div><strong>{player.currentStreak}</strong><span>CURRENT STREAK</span></div><div><strong>{player.bestStreak}</strong><span>BEST STREAK</span></div><div><strong>{player.perfectDays}</strong><span>PERFECT DAYS</span></div><div><strong>{week.revealedTiles.length}/25</strong><span>TILES OPEN</span></div></div>
       <p className="streak-help">Complete the daily quiz on consecutive days to extend your streak.</p>
       <p className="fine-print">Independent parody/satire. Progress is stored privately on this device. No account required.</p>
     </section>
-    <div className="ticker" aria-hidden="true"><span>BREAKING: LOCAL PLAYER CLAIMS FIVE QUESTIONS WERE ENOUGH · NEW PICTURE REMAINS HEAVILY CLASSIFIED</span></div>
+    <div className="ticker" aria-hidden="true"><span>{(jokesJson.tickerHeadlines.length ? jokesJson.tickerHeadlines : [executiveMetricsJson.tickerHeadline]).join(' · ')}</span></div>
   </main>;
 }

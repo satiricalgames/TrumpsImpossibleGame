@@ -26,8 +26,8 @@
     ]
   },
   "labels": {
-    "testMode": "TEST MODE — JUMP DIRECTLY TO",
-    "testButton": "TEST QUESTION",
+    "testMode": "TESTING CLOCK",
+    "testButton": "ADVANCE ONE DAY",
     "rotatingPrefix": "EXECUTIVE ORDER"
   }
 }

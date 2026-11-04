@@ -135,7 +135,8 @@
         "note": "General background only; it does not validate the game's configurable number.",
         "accessedOn": "2026-10-19"
       }
-    ]
+    ],
+    "metricKey": "activeInjunctions"
   },
   {
     "id": "taco-trap",

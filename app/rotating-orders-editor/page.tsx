@@ -122,7 +122,7 @@ export default function RotatingOrdersEditor() {
   const reset = () => { const next = cloneFile(builtIn); setFile(next); setMode('edit'); setEditingId(next.orders[0]?.id ?? null); setDraft(cloneOrder(next.orders[0])); fileHandle.current = null; setDirty(false); setErrors([]); setStatus('Reloaded the built-in rotating executive orders.'); };
 
   return <main className="question-editor-shell">
-    <header className="editor-header"><div><p>PRIVATE CONTENT TOOL</p><h1>ROTATING ORDERS EDITOR</h1><span>Unlinked from the game. Nothing changes until you save or download the complete JSON file.</span></div><div className="editor-file-actions">
+    <header className="editor-header"><div><p>PRIVATE CONTENT TOOL</p><h1>ROTATING ORDERS EDITOR</h1><span>The published enabled active order appears as an unscored bonus question on the game home page.</span></div><div className="editor-file-actions">
       <input ref={uploadInput} className="editor-hidden-input" type="file" accept=".json,application/json" onChange={(event) => void importFile(event.target.files?.[0])} />
       <button type="button" onClick={() => uploadInput.current?.click()}>UPLOAD WHOLE rotating_orders.json</button><button type="button" onClick={openLocalFile}>OPEN LOCAL FILE</button><button type="button" onClick={() => void save()}>SAVE TO OPEN FILE</button><button type="button" onClick={download}>DOWNLOAD JSON</button><button type="button" onClick={() => void copy()}>COPY JSON</button><a href={publicPath('/content-guides/ai-content-guide.md')} download>DOWNLOAD AI CONTENT GUIDE</a><button type="button" className="editor-quiet" onClick={reset}>RESET TO BUILT-IN</button>
     </div></header>

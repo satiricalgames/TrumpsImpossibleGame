@@ -137,7 +137,7 @@ export default function JokesEditor() {
 
   return <main className="question-editor-shell">
     <header className="editor-header">
-      <div><p>PRIVATE CONTENT TOOL</p><h1>JOKES JSON EDITOR</h1><span>Unlinked from the game. Nothing changes until you save or download the complete JSON file.</span></div>
+      <div><p>PRIVATE CONTENT TOOL</p><h1>JOKES JSON EDITOR</h1><span>Published ticker, recovery, share-template and label changes are used by the game.</span></div>
       <div className="editor-file-actions">
         <input ref={uploadInput} className="editor-hidden-input" type="file" accept=".json,application/json" onChange={(event) => void importFile(event.target.files?.[0])} />
         <button type="button" onClick={() => uploadInput.current?.click()}>UPLOAD WHOLE jokes.json</button>

@@ -1,5 +1,9 @@
 {
   "activeInjunctions": 27,
+  "inflation_yoy_pct": 3.7,
+  "egg_price_change_since_jan_2025_pct": -54.1,
+  "regular_gas_price_change_since_inauguration_pct": 37.8,
+  "real_average_worker_annual_change_usd": 630,
   "golfCounter": 214,
   "latestExecutiveOrder": {
     "label": "Executive Order 47-B: Facts May Vary",

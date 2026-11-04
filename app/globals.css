@@ -1012,6 +1012,15 @@ button:focus-visible { outline: 5px solid var(--gold); outline-offset: 4px; }
 .test-clock button { padding: 10px 13px; color: white; background: var(--ink); border: 0; font: 900 11px Arial, sans-serif; letter-spacing: .04em; cursor: pointer; }
 .test-clock button:disabled { color: #717782; background: #d7d8d5; cursor: not-allowed; }
 .test-clock .test-reset { color: var(--ink); background: white; border: 2px solid var(--ink); }
+.rotating-order-card { display: grid; gap: 12px; margin-top: 20px; padding: 18px; text-align: left; background: #f7f0d8; border: 4px solid var(--ink); box-shadow: 6px 6px 0 var(--red); }
+.rotating-order-card > p { margin: 0; color: var(--red); font: 900 11px "Arial Black", Arial, sans-serif; letter-spacing: .12em; }
+.rotating-order-card h2 { margin: 0; font: 900 clamp(17px, 3vw, 24px) "Arial Black", Arial, sans-serif; line-height: 1.08; }
+.rotating-order-card > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.rotating-order-card button { padding: 11px; text-align: left; color: var(--ink); background: white; border: 2px solid var(--ink); font: 800 12px Arial, sans-serif; cursor: pointer; }
+.rotating-order-card button.correct { color: #083d21; background: #9fe2b8; }
+.rotating-order-card button.wrong { color: #61100c; background: #ffaaa3; }
+.rotating-order-card button.muted { opacity: .55; }
+.rotating-order-card > strong { color: var(--red); font: 900 12px Arial, sans-serif; }
 .home-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin-top: 26px; }
 .home-stats div { display: grid; align-content: center; min-height: 76px; padding: 8px; background: #fff; border: 3px solid var(--ink); }
 .home-stats strong { display: block; color: var(--red); font-size: clamp(18px, 4vw, 28px); }
@@ -1092,6 +1101,7 @@ button:focus-visible { outline: 5px solid var(--gold); outline-offset: 4px; }
   .today-briefing, .daily-choices, .investigation-layout { grid-template-columns: 1fr; }
   .test-clock { grid-template-columns: 1fr; }
   .test-clock div { text-align: center; }
+  .rotating-order-card > div { grid-template-columns: 1fr; }
   .home-stats { grid-template-columns: repeat(2, 1fr); }
   .investigation-layout > div:first-child { grid-column: 1; }
   .weekly-board { width: min(100%, 560px); justify-self: center; }
