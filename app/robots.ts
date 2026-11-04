@@ -1,5 +1,7 @@
 import type { MetadataRoute } from 'next';
 
+export const dynamic = 'force-static';
+
 const configuredBasePath = process.env.NEXT_PUBLIC_BASE_PATH?.trim();
 const basePath = configuredBasePath
   ? `/${configuredBasePath.replace(/^\/+|\/+$/g, '')}`
